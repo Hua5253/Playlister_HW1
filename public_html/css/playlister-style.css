@@ -141,6 +141,11 @@ body {
   font-size:24pt;
 }
 
+.song-card-button {
+  float:right;
+  font-size:24pt;
+}
+
 .is-dragging {
   border: 2px black solid;
   opacity: 0.5;

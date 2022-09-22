@@ -1,6 +1,9 @@
 import jsTPS from "../common/jsTPS.js";
 import Playlist from "./Playlist.js";
 import MoveSong_Transaction from "./transactions/MoveSong_Transaction.js";
+import AddSong_Transaction from "./transactions/AddSong_Transaction.js";
+import RemoveSong_Transaction from "./transactions/RemoveSong_Transaction.js";
+import EditSong_Transaction from "./transactions/EditSong_Transaction.js";
 
 /**
  * PlaylisterModel.js
@@ -38,6 +41,12 @@ export default class PlaylisterModel {
 
         // THE MODAL IS NOT CURRENTLY OPEN
         this.confirmDialogOpen = false;
+
+        // A song array to save the removed song inorder to redo ->
+        this.removedSongs = [];
+
+        // foolproof design ->
+        this.hasListSelected = false;
     }
 
     // FOR MVC STUFF
@@ -82,6 +91,36 @@ export default class PlaylisterModel {
 
     setDeleteListId(initId) {
         this.deleteListId = initId;
+    }
+
+    // For editing song, set and get a temp song for storing the initial song object.
+    setTempSong(song) {
+        this.tempSong = {
+            title: song.title,
+            artist: song.artist,
+            youTubeId: song.youTubeId,
+        }
+        
+        // keep the original song in order to undo
+        this.originSong = {
+            title: song.title,
+            artist: song.artist,
+            youTubeId: song.youTubeId,
+        }
+    }
+
+    getTempSong() {
+        return this.tempSong;
+    }
+
+    // Set remove song index.
+    setModifySongIndex(index) {
+        this.modifySongIndex = index;
+    }
+
+    // Get remove song index.
+    getModifySongIndex() {
+        return this.modifySongIndex;
     }
 
     toggleConfirmDialogOpen() {
@@ -244,7 +283,63 @@ export default class PlaylisterModel {
         this.saveLists();
     }
 
-    // SIMPLE UNDO/REDO FUNCTIONS, NOTE THESE USE TRANSACTIONS
+    // Remove a song. My code goes here -> 
+    removeSong(index) {
+        // save the song to the removedSongs Array inorder to redo.
+        this.removedSongs.push(this.currentList.getSongAt(index));
+
+        this.currentList.songs.splice(index, 1);
+        this.saveLists();
+        this.restoreList();
+    }
+
+    // Redo remove song transaction ->
+    redoRemoveSong(index) {
+        // get the song from our removedSongs Array.
+        let song = this.removedSongs.pop();
+
+        this.currentList.songs.splice(index, 0, song);
+        this.saveLists();
+        this.restoreList();
+    }
+
+    // Adding a new song. My code goes here ->
+    addSong() {
+        this.currentList.songs.push({title: "Untitled", artist: "unknown", youTubeId: "dQw4w9WgXcQ"}); 
+        this.saveLists();
+        this.restoreList();
+    }
+
+    // Redo Add Song transaction ->
+    redoAddSong() {
+        this.currentList.songs.pop();
+        this.saveLists();
+        this.restoreList();
+    }
+
+    // Editing a song. Ny code goes here ->
+    editSong(index, initTitle, initArtist, youTubeId) {
+        let songToBeEdit = this.currentList.getSongAt(index);
+
+        if (initTitle === "") {
+            songToBeEdit.title = "untitled";
+        } else {
+            songToBeEdit.title = initTitle;
+        }
+        if (initArtist === "") {
+            songToBeEdit.artist = "unknown";
+        } else {
+            songToBeEdit.artist = initArtist;
+        }
+        if (youTubeId === "") {
+            songToBeEdit.youTubeId = "dQw4w9WgXcQ";
+        } else {
+            songToBeEdit.youTubeId = youTubeId;
+        }
+        
+        this.saveLists();
+        this.restoreList();
+    }
 
     undo() {
         if (this.tps.hasTransactionToUndo()) {
@@ -263,8 +358,26 @@ export default class PlaylisterModel {
     // NOW THE FUNCTIONS THAT CREATE AND ADD TRANSACTIONS
     // TO THE TRANSACTION STACK
 
-    addMoveSongTransaction(fromIndex, onIndex) {
-        let transaction = new MoveSong_Transaction(this, fromIndex, onIndex);
+    addMoveSongTransaction(fromIndex, toIndex) {
+        let transaction = new MoveSong_Transaction(this, fromIndex, toIndex);
+        this.tps.addTransaction(transaction);
+        this.view.updateToolbarButtons(this);
+    }
+
+    addAddSongTransaction() {
+        let transaction = new AddSong_Transaction(this);
+        this.tps.addTransaction(transaction);
+        this.view.updateToolbarButtons(this);
+    }
+
+    addRemoveSongTransaction(index) {
+        let transaction = new RemoveSong_Transaction(this, index);
+        this.tps.addTransaction(transaction);
+        this.view.updateToolbarButtons(this);
+    }
+
+    addEditSongTransaction(index, initTitle, initArtist, youTubeId) {
+        let transaction = new EditSong_Transaction(this, index, initTitle, initArtist, youTubeId);
         this.tps.addTransaction(transaction);
         this.view.updateToolbarButtons(this);
     }

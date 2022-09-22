@@ -75,6 +75,25 @@ span {
   grid-row: 1 / 4;
 }
 
+.edit-song-content {
+  font-size: 24pt;
+}
+
+#edit-title-span {
+  float:right;
+  font-size:24pt;
+}
+
+#edit-artist-span {
+  float:right;
+  font-size:24pt;
+}
+
+#edit-ID-span {
+  float:right;
+  font-size:24pt;
+}
+
 .modal-button {
   font-size: 20pt;
 }

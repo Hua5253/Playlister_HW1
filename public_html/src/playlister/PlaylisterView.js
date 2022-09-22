@@ -18,9 +18,11 @@ export default class PlaylisterView {
     init() {
         // @todo - ONCE YOU IMPLEMENT THE FOOLPROOF DESIGN STUFF YOU SHOULD PROBABLY
         // START THESE BUTTONS OFF AS DISABLED
-        this.enableButton('undo-button');
-        this.enableButton('redo-button');
-        this.enableButton('close-button');
+        this.enableButton("add-list-button");
+        this.disableButton("add-song-button");
+        this.disableButton('undo-button');
+        this.disableButton('redo-button');
+        this.disableButton('close-button');
     }
 
     /*
@@ -51,6 +53,11 @@ export default class PlaylisterView {
             let list = lists[i];
             this.appendListToView(list);
         }
+    }
+
+    // update list. my code goes here ->
+    update(list) {
+        this.refreshPlaylist(list);
     }
 
     /*
@@ -113,9 +120,39 @@ export default class PlaylisterView {
             itemDiv.classList.add("unselected-list-card");
             itemDiv.id = "playlist-card-" + (i + 1);
 
+            // MAKE THE TEXT CONTENT
+            let titleSpan = document.createElement("span");
+            titleSpan.setAttribute("id", "song-card-title" + song.title);
+            titleSpan.setAttribute("class", "song-card-title");
+            titleSpan.append(document.createTextNode(song.title));
+            let artistSpan = document.createElement("span");
+            artistSpan.setAttribute("id", "song-card-artist" + song.artist);
+            artistSpan.setAttribute("class", 'song-card-artist');
+            artistSpan.append(document.createTextNode(song.artist));
+
+            // let itemText = document.createTextNode(song.title + " by " + song.artist);
+
+            // MAKE THE NUMBRE OF CARD
+            let span = document.createElement('span');
+            let num = document.createTextNode(i + 1 + ".")
+            span.appendChild(num);
+
+            // MAKE THE HYPERLINK OF THE CONTENT
+            let hyperLink = song.youTubeId;
+            let a = document.createElement('a');
+            a.href = "https://www.youtube.com/watch?v=" + hyperLink;
+
+            // MAKE THE DELETE SONG BUTTON FOR THIS CARD
+            let deleteButton = document.createElement("input");
+            deleteButton.setAttribute("type", "button");
+            deleteButton.setAttribute("id", "remove-song-" + (i + 1));
+            deleteButton.setAttribute("class", "song-card-button");
+            deleteButton.setAttribute("value", "X");    
+
             // PUT THE CONTENT INTO THE CARD
-            let itemText = document.createTextNode(song.title + " by " + song.artist);
-            itemDiv.appendChild(itemText);
+            a.append(titleSpan, "by", artistSpan);
+            itemDiv.append(span, a);
+            itemDiv.appendChild(deleteButton);
 
             // AND PUT THE CARD INTO THE UI
             itemsDiv.appendChild(itemDiv);
@@ -197,9 +234,34 @@ export default class PlaylisterView {
         let tps = model.tps;
         if (model.confirmDialogOpen) {
             this.disableButton("add-list-button");
+            this.disableButton("add-song-button");
             this.disableButton("undo-button");
             this.disableButton("redo-button");
             this.disableButton("close-button");
+        } 
+        else {
+            if (tps.hasTransactionToUndo())
+                this.enableButton("undo-button");
+            else
+                this.disableButton("undo-button");
+
+            if (tps.hasTransactionToRedo())
+                this.enableButton("redo-button");
+            else
+                this.disableButton("redo-button");
+
+            if (model.hasListSelected) {
+                this.disableButton("add-list-button");
+                this.enableButton("close-button");
+            }
+            else {
+                this.enableButton("add-list-button");
+                this.disableButton("close-button");
+            }
+            if (model.hasListSelected) 
+                this.enableButton("add-song-button");
+            else
+                this.disableButton("add-song-button");
         }
     }
 

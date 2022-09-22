@@ -48,9 +48,18 @@ export default class PlaylisterController {
         // HANDLER FOR ADDING A NEW LIST BUTTON
         document.getElementById("add-list-button").onmousedown = (event) => {
             let newList = this.model.addNewList("Untitled", []);
+            this.model.hasListSelected = true;
             this.model.loadList(newList.id);
             this.model.saveLists();
         }
+
+        // HANDLER FOR ADDING A NEW SONG BUTTON.   My code goes here ->
+        document.getElementById("add-song-button").onmousedown = (event) => {
+            this.model.addAddSongTransaction();
+            this.model.saveLists();
+            this.model.restoreList();   
+        }
+
         // HANDLER FOR UNDO BUTTON
         document.getElementById("undo-button").onmousedown = (event) => {
             this.model.undo();
@@ -61,6 +70,7 @@ export default class PlaylisterController {
         }
         // HANDLER FOR CLOSE LIST BUTTON
         document.getElementById("close-button").onmousedown = (event) => {
+            this.model.hasListSelected = false;
             this.model.unselectAll();
             this.model.unselectCurrentList();
         }
@@ -101,7 +111,53 @@ export default class PlaylisterController {
             // CLOSE THE MODAL
             let deleteListModal = document.getElementById("delete-list-modal");
             deleteListModal.classList.remove("is-visible");
-        }        
+        }    
+
+        // RESPOND TO THE USER CONFIRMING TO REMOVE A SONG. My code goes here ->
+        let removeSongConfirmButton = document.getElementById("remove-song-confirm-button");
+        removeSongConfirmButton.onclick = (event) => {
+            let removeSongIndex = this.model.getModifySongIndex();
+            this.model.addRemoveSongTransaction(removeSongIndex);
+
+            // Allow other interactions
+            this.model.toggleConfirmDialogOpen();
+
+            // close the modal
+            document.getElementById("remove-song-modal").classList.remove("is-visible");
+        }
+
+        // RESPOND TO THE USER CLOSING THE REMOVE SONG MODAL
+        let removeSongCancelButton = document.getElementById("remove-song-cancel-button");
+        removeSongCancelButton.onclick = (event) => {
+            this.model.toggleConfirmDialogOpen();
+
+            // close the modal
+            document.getElementById("remove-song-modal").classList.remove("is-visible");
+        }
+
+        // RESPOND TO THE USER CONFIRMING TO EDIT A SONG. My code goes here ->
+        let editSongConfirmButton = document.getElementById("edit-song-confirm-button");
+        editSongConfirmButton.onclick = (event) => {
+            let tempSong = this.model.getTempSong();
+            let index = this.model.getModifySongIndex();
+
+            this.model.addEditSongTransaction(index, tempSong.title, tempSong.artist, tempSong.youTubeId);
+            this.model.toggleConfirmDialogOpen();
+
+            // CLOSE THE MODAL
+            let editSongModal = document.getElementById("edit-song-modal");
+            editSongModal.classList.remove("is-visible");
+        }
+        // RESPOND TO THE USER CLOSING THE EDIT SONG MODAL. My code goes here ->
+        let editSongCancelButton = document.getElementById("edit-song-cancel-button");
+        editSongCancelButton.onclick = (event) => {
+            // ALLOW OTHER INTERACTIONS
+            this.model.toggleConfirmDialogOpen();
+            
+            // CLOSE THE MODAL
+            let editSongModal = document.getElementById("edit-song-modal");
+            editSongModal.classList.remove("is-visible");
+        } 
     }
 
     /*
@@ -121,6 +177,7 @@ export default class PlaylisterController {
             // MAKE SURE NOTHING OLD IS SELECTED
             this.model.unselectAll();
 
+            this.model.hasListSelected = true;
             // GET THE SELECTED LIST
             this.model.loadList(id);
         }
@@ -199,6 +256,116 @@ export default class PlaylisterController {
         for (let i = 0; i < this.model.getPlaylistSize(); i++) {
             // GET THE CARD
             let card = document.getElementById("playlist-card-" + (i + 1));
+            
+            // FOR EDITING A SONG  My code goes here ->
+            card.ondblclick = (event) => {
+                this.ignoreParentClick(event);  
+                let editSongModal = document.getElementById("edit-song-modal");
+
+                let song = this.model.getSong(i);
+
+                // temporarily store the song being editing
+                this.model.setTempSong(song);
+
+                // record the index of the song the user wishes to edit.
+                this.model.setModifySongIndex(i);
+
+                let editTitleSpan = document.getElementById("edit-title-span");
+                editTitleSpan.innerHTML = "";
+                let titleInput = document.createElement("input");
+                titleInput.setAttribute("type", "text");
+                titleInput.setAttribute("id", "song-card-title-input-" + i);
+                titleInput.setAttribute("value", song.title);
+                editTitleSpan.append(titleInput);
+                
+                let editArtistSpan = document.getElementById("edit-artist-span");
+                editArtistSpan.innerHTML = "";
+                let artistInput = document.createElement("input");
+                artistInput.setAttribute("type", "text");
+                artistInput.setAttribute("id", "song-card-artist-input-" + i);
+                artistInput.setAttribute("value", song.artist);
+                editArtistSpan.append(artistInput);
+
+                let editIdSpan = document.getElementById("edit-ID-span");
+                editIdSpan.innerHTML = "";
+                let idInput = document.createElement("input");
+                idInput.setAttribute("type", "text");
+                idInput.setAttribute("id", "song-card-id-input-" + i);
+                idInput.setAttribute("value", song.youTubeId);
+                editIdSpan.append(idInput);
+
+                this.model.refreshToolbar();
+    
+                //OPEN UP THE DIALOG
+                editSongModal.classList.add("is-visible");
+                this.model.toggleConfirmDialogOpen();
+
+                // specify handlers for input field.
+                titleInput.ondblclick = (event) => {
+                    this.ignoreParentClick(event);
+                }
+                artistInput.ondblclick = (event) => {
+                    this.ignoreParentClick(event);
+                }
+                idInput.ondblclick = (event) => {
+                    this.ignoreParentClick(event);
+                }
+
+                let tempSong = this.model.getTempSong();
+
+                titleInput.onkeydown = (event) => {
+                    if (event.key === 'Enter') {
+                        tempSong.title = event.target.value;
+                        this.model.refreshToolbar();
+                    }
+                }
+                titleInput.onblur = (event) => {
+                    tempSong.title = event.target.value;
+                    this.model.refreshToolbar();
+                }
+                
+                artistInput.onkeydown = (event) => {
+                    if (event.key === 'Enter') {
+                        tempSong.artist = event.target.value;
+                        this.model.refreshToolbar();        
+                    }
+                }
+                artistInput.onblur = (event) => {
+                    tempSong.artist = event.target.value;
+                    this.model.refreshToolbar();
+                }
+
+                idInput.onkeydown = (event) => {
+                    if (event.key === 'Enter') {
+                        tempSong.youTubeId = event.target.value;
+                        this.model.refreshToolbar();
+                    }
+                }
+                idInput.onblur = (event) => {
+                    tempSong.youTubeId = event.target.value;
+                    this.model.refreshToolbar();
+                } 
+            }
+
+            // FOR REMOVING A SONG HANDLER. MY CODE GOES HERE ->
+            document.getElementById("remove-song-" + (i + 1)).onmousedown = (event) => {
+                this.ignoreParentClick(event);
+
+                // record the index of the song the user wishes to remove.
+                this.model.setModifySongIndex(i);
+
+                // verify that the user really wants to delete the playlist
+                // the code below opens up the list delete verificaton dialog.
+                let songTitle = this.model.getSong(i).title;
+                let removeSpan = document.getElementById("remove-song-span");
+                removeSpan.innerHTML = "";
+                removeSpan.appendChild(document.createTextNode(songTitle));
+                let removeSongModal = document.getElementById("remove-song-modal");
+
+                // open up the dialog.
+                removeSongModal.classList.add("is-visible");
+                this.model.toggleConfirmDialogOpen();
+            }
             
             // NOW SETUP ALL CARD DRAGGING HANDLERS AS THE USER MAY WISH TO CHANGE
             // THE ORDER OF SONGS IN THE PLAYLIST
